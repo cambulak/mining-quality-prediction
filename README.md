@@ -1,5 +1,9 @@
 # ⛏️ Mining Quality Prediction: End-to-End ML Project
+# ⛏️ Mining Quality Prediction
 
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](BURAYA_STREAMLIT_LINKINI_YAPISTIR)
+
+🚀 **Canlı Demo:** [Uygulamayı Kullanmak İçin Tıklayın](https://multigroupminingqualitypediction.streamlit.app/)
 Bu proje, gerçek bir maden zenginleştirme (flotasyon) tesisinden alınan sensör verilerini kullanarak, üretim kalitesini belirleyen **% Silika (Safsızlık)** oranını tahmin eden uçtan uca bir makine öğrenmesi çözümüdür.
 
 ![Project Status](https://img.shields.io/badge/Status-Completed-success)
