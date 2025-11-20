@@ -10,7 +10,10 @@ Bu proje, gerçek bir maden zenginleştirme (flotasyon) tesisinden alınan sens�
 ![Python](https://img.shields.io/badge/Python-3.9%2B-blue)
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Library](https://img.shields.io/badge/Library-XGBoost%20%7C%20Streamlit%20%7C%20SHAP-orange)
+## 🎥 Proje Videosu
+Uygulamanın detaylı sunumunu ve canlı demosunu aşağıdan izleyebilirsiniz:
 
+[![Maden Kalite Tahmin Sistemi](https://img.youtube.com/vi/1il4nTwgs80/0.jpg)](https://www.youtube.com/watch?v=1il4nTwgs80)
 ## 📸 Proje Önizlemesi
 ![Uygulama Arayüzü](reports/app_screenshot.png)
 
