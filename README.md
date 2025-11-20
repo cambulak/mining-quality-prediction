@@ -36,7 +36,22 @@ Proje 6 ana aşamadan oluşmaktadır:
 6. **Deployment:** Model `Streamlit` ile canlı bir web arayüzüne dönüştürüldü.
 
 ## 📈 Model Performansı ve Değerlendirme
+## 📈 Model Performansı
 
+Projenin başarısı, **R2 Score** (açıklayıcılık) ve **RMSE** (hata payı) metrikleri ile ölçülmüştür. Aşağıdaki grafik, Baseline model ile Final model arasındaki farkı ve validasyon stratejisinin etkisini göstermektedir.
+
+![Model Performans Grafiği](reports/performance_comparison.png)
+
+### Detaylı Sonuçlar
+
+| Model | Validasyon Yöntemi | R2 Score | RMSE | Yorum |
+|-------|--------------------|----------|------|-------|
+| **Baseline (RF)** | Shuffle Split | 0.88 | 0.38 | ⚠️ **Data Leakage:** Rastgele karıştırma nedeniyle model geleceği görmüştür. Skorlar yanıltıcıdır. |
+| **Final (XGBoost)** | **Time Series Split** | **0.70** | **0.64** | ✅ **Gerçekçi:** Zaman serisine sadık kalınarak test edilmiştir. Endüstriyel standartlarda güvenilir bir skordur. |
+
+> **İş Etkisi (Business Impact):**
+> * **Karar Hızı:** Laboratuvar analizi (2 saat) yerine anlık tahmin (<1 sn).
+> * **Verimlilik:** Operatörlerin hatalı üretime anında müdahale etmesi sağlanarak enerji kaybı önlendi.
 | Model | Validasyon Yöntemi | R2 Score | RMSE | Açıklama |
 |-------|--------------------|----------|------|----------|
 | **Baseline (Random Forest)** | Shuffle Split (Rastgele) | 0.88 | 0.38 | **Data Leakage Var.** Rastgele bölme yapıldığı için model geleceği gördü. |
@@ -44,7 +59,6 @@ Proje 6 ana aşamadan oluşmaktadır:
 
 **Neden Time Series Split Seçildi?**
 Endüstriyel veriler zamana bağlıdır. Rastgele karıştırarak (Shuffle) test yapmak, modelin 12:00 verisini öğrenip 11:59'u tahmin etmesine (kolaycılığa) yol açar. Projede gerçek hayat simülasyonu için veriyi zamana göre keserek (Ocak-Ağustos: Train, Eylül: Test) validasyon yapılmıştır.
-
 ## 🧠 Modelin Karar Mekanizması (SHAP Analizi)
 Modelin "Kara Kutu" olmasını engellemek için SHAP analizi yapılmıştır.
 * **Bulgu:** Kaliteyi etkileyen en kritik faktör **Demir Konsantresi (Iron Concentrate)** seviyesidir.
