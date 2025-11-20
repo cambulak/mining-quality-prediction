@@ -16,7 +16,7 @@ Bu sistem, tesisteki sensör verilerini (Demir Besleme, Hava Akışı vb.) kulla
 """)
 
 
-# Modeli Yükleme (Hata yönetimi eklenmiş hali)
+# Modeli Yükleme
 @st.cache_resource
 def load_model():
     # Model yolunu kontrol et
@@ -69,6 +69,14 @@ def user_input_features():
 
 
 input_data = user_input_features()
+
+# --- İMZA BÖLÜMÜ (YENİ EKLENDİ) ---
+st.sidebar.markdown("---")
+st.sidebar.caption(
+    "Bu verimlilik aracı **Sedat Akdağ (Maden Yüksek Mühendisi)** tarafından "
+    "**MultiGroup Zero2End Machine Learning Bootcamp** kapsamında hazırlanmıştır."
+)
+# ----------------------------------
 
 # Tahmin Butonu
 if st.button('🔍 Kaliteyi Tahmin Et'):
