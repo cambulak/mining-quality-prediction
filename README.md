@@ -11,6 +11,9 @@ Bu proje, gerçek bir maden zenginleştirme (flotasyon) tesisinden alınan sens�
 
 **Çözüm:** Geliştirdiğimiz Makine Öğrenmesi (XGBoost) modeli, tesisin sensör verilerini (Hava akışı, Pülp yoğunluğu, Demir beslemesi vb.) anlık olarak analiz eder ve kaliteyi **saniyeler içinde** tahmin eder. Bu sayede operatörler anlık müdahale edebilir.
 
+## 📸 Proje Önizlemesi
+![Uygulama Arayüzü](reports/app_screenshot.png)
+
 ## 📊 Veri Seti
 * **Kaynak:** [Kaggle - Mining Process Flotation Plant Database](https://www.kaggle.com/datasets/edumagalhaes/quality-prediction-in-a-mining-process)
 * **Boyut:** 737,453 satır, 24 sütun (Mart 2017 - Eylül 2017 arası).
