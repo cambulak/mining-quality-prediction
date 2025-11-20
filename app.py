@@ -55,14 +55,24 @@ def log_prediction(input_data, raw_pred, bias, final_pred):
     c = conn.cursor()
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+    # KRİTİK DÜZELTME:
+    # Numpy tiplerini (float32/64) zorla Python float'ına çeviriyoruz.
+    # Aksi takdirde SQLite bunları 'bytes' olarak kaydeder ve grafik çizilemez.
     c.execute("INSERT INTO predictions VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
-              (timestamp, input_data['Iron_Feed'], input_data['Silica_Feed'],
-               input_data['Starch_Flow'], input_data['Amina_Flow'], input_data['Ore_Pulp_Flow'],
-               input_data['Ore_Pulp_pH'], input_data['Ore_Pulp_Density'], input_data['Iron_Concentrate'],
-               raw_prediction, bias, final_pred))
+              (timestamp,
+               float(input_data['Iron_Feed']),
+               float(input_data['Silica_Feed']),
+               float(input_data['Starch_Flow']),
+               float(input_data['Amina_Flow']),
+               float(input_data['Ore_Pulp_Flow']),
+               float(input_data['Ore_Pulp_pH']),
+               float(input_data['Ore_Pulp_Density']),
+               float(input_data['Iron_Concentrate']),
+               float(raw_pred),
+               float(bias),
+               float(final_pred)))
     conn.commit()
     conn.close()
-
 
 def get_logs():
     """Geçmiş tahminleri getirir."""
