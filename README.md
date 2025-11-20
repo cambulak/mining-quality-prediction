@@ -4,67 +4,52 @@ Bu proje, gerçek bir maden zenginleştirme (flotasyon) tesisinden alınan sens�
 
 ![Project Status](https://img.shields.io/badge/Status-Completed-success)
 ![Python](https://img.shields.io/badge/Python-3.9%2B-blue)
+![License](https://img.shields.io/badge/License-MIT-green)
 ![Library](https://img.shields.io/badge/Library-XGBoost%20%7C%20Streamlit%20%7C%20SHAP-orange)
 
-## 🎯 Problem Tanımı ve Çözüm
-**Problem:** Flotasyon tesislerinde ürün kalitesi (Silika oranı) geleneksel laboratuvar analizleriyle belirlenir. Ancak bu analizler **1-2 saat** sürer. Bu gecikme, prosesin geç optimize edilmesine, enerji israfına ve hatalı üretime neden olur.
-
-**Çözüm:** Geliştirdiğimiz Makine Öğrenmesi (XGBoost) modeli, tesisin sensör verilerini (Hava akışı, Pülp yoğunluğu, Demir beslemesi vb.) anlık olarak analiz eder ve kaliteyi **saniyeler içinde** tahmin eder. Bu sayede operatörler anlık müdahale edebilir.
-
 ## 📸 Proje Önizlemesi
+*(Uygulama ekran görüntüsünü reports klasörüne 'app_screenshot.png' olarak eklediyseniz burada görünür)*
 ![Uygulama Arayüzü](reports/app_screenshot.png)
+
+## 🎯 Problem Tanımı ve Çözüm
+**Problem:** Flotasyon tesislerinde ürün kalitesi (Silika oranı) laboratuvar analizleriyle belirlenir. Ancak bu analizler **2-4 saat** sürer. Bu gecikme, prosesin geç optimize edilmesine ve hatalı üretime neden olur.
+
+**Çözüm:** Geliştirdiğimiz **XGBoost** modeli, tesisin sensör verilerini (Hava akışı, Pülp yoğunluğu, Demir beslemesi vb.) anlık olarak analiz eder ve kaliteyi **saniyeler içinde** tahmin eder. Ayrıca **"Human-in-the-loop"** yaklaşımıyla, laboratuvardan gelen yeni sonuçlarla model anlık olarak kalibre edilebilir.
 
 ## 📊 Veri Seti
 * **Kaynak:** [Kaggle - Mining Process Flotation Plant Database](https://www.kaggle.com/datasets/edumagalhaes/quality-prediction-in-a-mining-process)
 * **Boyut:** 737,453 satır, 24 sütun (Mart 2017 - Eylül 2017 arası).
-* **Yapı:** Zaman serisi (Time-Series) niteliğinde sensör verileri.
 * **Hedef Değişken:** `% Silica Concentrate` (Minimize edilmesi gereken safsızlık).
 
 > **⚠️ Önemli Not:** Veri seti boyutu (175MB) GitHub sınırlarını aştığı için repoya eklenmemiştir. Projeyi çalıştırmak için veriyi yukarıdaki linkten indirip `data/` klasörüne `MiningProcess_Flotation_Plant_Database.csv` adıyla kaydetmelisiniz.
 
 ## 🛠️ Pipeline ve Metodoloji
 
-Proje 6 ana aşamadan oluşmaktadır:
+1. **Preprocessing:** Tarih formatı düzeltildi, virgül ondalık ayracı işlendi.
+2. **Feature Engineering:**
+   * **Rolling Window:** Sensör gürültüsünü azaltmak için son 5 periyodun ortalaması alındı.
+   * **Lag Features:** Tesis içindeki akış gecikmesini modellemek için `Lag1` özellikleri türetildi.
+3. **Modelleme:** `RandomForest` (Baseline) ve `XGBoost` (Final) modelleri kuruldu.
+4. **Optimizasyon:** `Optuna` ile hiperparametre optimizasyonu yapıldı.
+5. **Deployment:** Model `Streamlit` ile canlıya alındı ve Lab Kalibrasyon özelliği eklendi.
 
-1. **EDA (Keşifçi Veri Analizi):** Veri dağılımı ve korelasyonlar incelendi. Demir konsantrasyonu ile Silika arasındaki negatif ilişki tespit edildi.
-2. **Preprocessing:** Tarih formatı `datetime`'a çevrildi, virgül ondalık ayracı düzeltildi.
-3. **Feature Engineering:**
-   * **Rolling Window (Hareketli Ortalama):** Sensörlerdeki anlık gürültüyü (noise) azaltmak için son 5 periyodun ortalaması alındı.
-   * **Lag Features:** Tesis içindeki akış gecikmesini (girişten çıkışa geçen süre) modellemek için `Lag1` özellikleri türetildi.
-4. **Modelleme:** `RandomForest` ile baseline oluşturuldu, ardından `XGBoost` seçildi.
-5. **Optimizasyon:** `Optuna` kütüphanesi ile hiperparametre optimizasyonu (Learning rate, max depth vb.) yapıldı.
-6. **Deployment:** Model `Streamlit` ile canlı bir web arayüzüne dönüştürüldü.
-
-## 📈 Model Performansı ve Değerlendirme
 ## 📈 Model Performansı
 
-Projenin başarısı, **R2 Score** (açıklayıcılık) ve **RMSE** (hata payı) metrikleri ile ölçülmüştür. Aşağıdaki grafik, Baseline model ile Final model arasındaki farkı ve validasyon stratejisinin etkisini göstermektedir.
+Aşağıdaki grafik, Baseline ve Final model arasındaki performans farkını göstermektedir:
 
 ![Model Performans Grafiği](reports/performance_comparison.png)
 
-### Detaylı Sonuçlar
-
 | Model | Validasyon Yöntemi | R2 Score | RMSE | Yorum |
 |-------|--------------------|----------|------|-------|
-| **Baseline (RF)** | Shuffle Split | 0.88 | 0.38 | ⚠️ **Data Leakage:** Rastgele karıştırma nedeniyle model geleceği görmüştür. Skorlar yanıltıcıdır. |
-| **Final (XGBoost)** | **Time Series Split** | **0.70** | **0.64** | ✅ **Gerçekçi:** Zaman serisine sadık kalınarak test edilmiştir. Endüstriyel standartlarda güvenilir bir skordur. |
+| **Baseline (RF)** | Shuffle Split | 0.88 | 0.38 | ⚠️ **Data Leakage:** Rastgele karıştırma nedeniyle model geleceği görmüştür. |
+| **Final (XGBoost)** | **Time Series Split** | **0.70** | **0.64** | ✅ **Gerçekçi:** Zaman serisine sadık kalınarak test edilmiştir. Endüstriyel standartlarda güvenilirdir. |
 
-> **İş Etkisi (Business Impact):**
-> * **Karar Hızı:** Laboratuvar analizi (2 saat) yerine anlık tahmin (<1 sn).
-> * **Verimlilik:** Operatörlerin hatalı üretime anında müdahale etmesi sağlanarak enerji kaybı önlendi.
-| Model | Validasyon Yöntemi | R2 Score | RMSE | Açıklama |
-|-------|--------------------|----------|------|----------|
-| **Baseline (Random Forest)** | Shuffle Split (Rastgele) | 0.88 | 0.38 | **Data Leakage Var.** Rastgele bölme yapıldığı için model geleceği gördü. |
-| **Final Model (XGBoost)** | **Time Series Split** | **0.70** | **0.64** | **Gerçekçi Senaryo.** Gelecek verisi gösterilmeden, sadece geçmişe bakarak tahmin yapıldı. |
+## 🧠 Açıklanabilirlik ve İş Etkisi
+**SHAP Analizi** sonuçlarına göre kaliteyi etkileyen en kritik faktör **Demir Konsantresi (Iron Concentrate)** seviyesidir.
+* **Bulgu:** Demir konsantrasyonu düştüğünde, safsızlık (Silika) artmakta ve kalite bozulmaktadır.
+* **Lab Entegrasyonu:** Uygulamaya eklenen **Bias Correction** özelliği sayesinde, operatör son laboratuvar sonucunu sisteme girerek modelin tahminlerini anlık olarak düzeltebilir.
 
-**Neden Time Series Split Seçildi?**
-Endüstriyel veriler zamana bağlıdır. Rastgele karıştırarak (Shuffle) test yapmak, modelin 12:00 verisini öğrenip 11:59'u tahmin etmesine (kolaycılığa) yol açar. Projede gerçek hayat simülasyonu için veriyi zamana göre keserek (Ocak-Ağustos: Train, Eylül: Test) validasyon yapılmıştır.
-## 🧠 Modelin Karar Mekanizması (SHAP Analizi)
-Modelin "Kara Kutu" olmasını engellemek için SHAP analizi yapılmıştır.
-* **Bulgu:** Kaliteyi etkileyen en kritik faktör **Demir Konsantresi (Iron Concentrate)** seviyesidir.
-* **İş Aksiyonu:** Simülasyonlar göstermiştir ki; Demir konsantrasyonu düştüğünde, safsızlık (Silika) artmaktadır. Operatörler arayüz üzerinden bu değeri takip ederek kaliteyi kontrol altında tutabilir.
-
-## 🚀 Kurulum ve Çalıştırma (Local)
+## 🚀 Kurulum ve Çalıştırma
 
 **1. Repoyu Klonlayın:**
 ```bash
@@ -80,49 +65,29 @@ pip install -r requirements.txt
 Bash
 
 python src/pipeline.py
-Bu işlem veriyi işler, modeli eğitir ve models/final_xgboost_model.pkl dosyasını oluşturur.
+4. Performans Grafiğini Üretin (Opsiyonel):
 
-4. Arayüzü Başlatın:
+Bash
+
+python src/visualize_metrics.py
+5. Arayüzü Başlatın:
 
 Bash
 
 streamlit run app.py
-
 📂 Repo Yapısı
-
 mining-quality-prediction/
 ├── data/               # Ham veri dosyası (Git-ignore edilmiştir)
-├── notebooks/          # Jupyter Notebooks
-│   ├── 1_eda.ipynb
-│   ├── 2_baseline.ipynb
-│   ├── 3_feature_engineering.ipynb
-│   ├── 4_model_optimization.ipynb
-│   └── 5_evaluation.ipynb
+├── notebooks/          # Jupyter Notebooks (EDA, Baseline, Optimizasyon, Eval)
 ├── src/                # Kaynak kodlar
-│   └── pipeline.py     # Final eğitim scripti
+│   ├── pipeline.py     # Final eğitim scripti
+│   └── visualize_metrics.py # Rapor grafikleri üreteci
 ├── models/             # Eğitilmiş model dosyaları (.pkl)
-├── app.py              # Streamlit web arayüzü kodu
+├── reports/            # Raporlar ve Grafikler
+│   └── performance_comparison.png
+├── app.py              # Streamlit web arayüzü (Lab entegrasyonlu)
 ├── requirements.txt    # Proje bağımlılıkları
+├── LICENSE             # MIT Lisansı
 └── README.md           # Proje dokümantasyonu
-
-🛠️ Kullanılan Teknolojiler
-Python 3.x
-
-Veri İşleme: Pandas, NumPy
-
-Makine Öğrenmesi: Scikit-learn, XGBoost
-
-Optimizasyon: Optuna
-
-Açıklanabilirlik (XAI): SHAP
-
-Görselleştirme: Matplotlib, Seaborn, Plotly
-
-Deployment: Streamlit
-
 📞 İletişim
-Geliştirici: Sedat AKDAG
-
-LinkedIn: [https://linkedin/in/msedatakdag]
-
-Email: [akdags@outlook.com.tr]
+Bu verimlilik aracı Sedat Akdağ (Maden Yüksek Mühendisi) tarafından MultiGroup Zero2End Machine Learning Bootcamp kapsamında hazırlanmıştır.
