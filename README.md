@@ -12,7 +12,6 @@ Bu proje, gerçek bir maden zenginleştirme (flotasyon) tesisinden alınan sens�
 ![Library](https://img.shields.io/badge/Library-XGBoost%20%7C%20Streamlit%20%7C%20SHAP-orange)
 
 ## 📸 Proje Önizlemesi
-*(Uygulama ekran görüntüsünü reports klasörüne 'app_screenshot.png' olarak eklediyseniz burada görünür)*
 ![Uygulama Arayüzü](reports/app_screenshot.png)
 
 ## 🎯 Problem Tanımı ve Çözüm

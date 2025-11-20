@@ -1,23 +1,33 @@
 import streamlit as st
 import pandas as pd
-import joblib
-import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
-import os
 import sqlite3
 from datetime import datetime
+from src.inference import ModelService
+from src import config  # Veritabanı yolu için
 
 # --- AYARLAR ---
 st.set_page_config(page_title="Madencilik Kalite Tahmini", page_icon="⛏️", layout="wide")
 
 
-# --- VERİTABANI İŞLEMLERİ (MONITORING) ---
+# --- SERVİSİ BAŞLAT ---
+@st.cache_resource
+def get_service():
+    try:
+        return ModelService()
+    except Exception as e:
+        st.error(f"Hata: {e}")
+        return None
+
+
+service = get_service()
+
+
+# --- VERİTABANI İŞLEMLERİ ---
 def init_db():
-    """Loglama için SQLite veritabani oluşturur."""
-    conn = sqlite3.connect('monitoring.db')
+    conn = sqlite3.connect(config.DB_PATH)
     c = conn.cursor()
-    # Tabloyu oluştur (Eğer yoksa)
     c.execute('''CREATE TABLE IF NOT EXISTS predictions
                  (
                      timestamp
@@ -49,90 +59,47 @@ def init_db():
     conn.close()
 
 
-def log_prediction(input_data, raw_pred, bias, final_pred):
-    """Yapılan tahmini veritabanına kaydeder."""
-    conn = sqlite3.connect('monitoring.db')
+def log_prediction(data, raw, bias, final):
+    conn = sqlite3.connect(config.DB_PATH)
     c = conn.cursor()
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-    # KRİTİK DÜZELTME:
-    # Numpy tiplerini (float32/64) zorla Python float'ına çeviriyoruz.
-    # Aksi takdirde SQLite bunları 'bytes' olarak kaydeder ve grafik çizilemez.
     c.execute("INSERT INTO predictions VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
-              (timestamp,
-               float(input_data['Iron_Feed']),
-               float(input_data['Silica_Feed']),
-               float(input_data['Starch_Flow']),
-               float(input_data['Amina_Flow']),
-               float(input_data['Ore_Pulp_Flow']),
-               float(input_data['Ore_Pulp_pH']),
-               float(input_data['Ore_Pulp_Density']),
-               float(input_data['Iron_Concentrate']),
-               float(raw_pred),
-               float(bias),
-               float(final_pred)))
+              (timestamp, float(data['Iron_Feed']), float(data['Silica_Feed']),
+               float(data['Starch_Flow']), float(data['Amina_Flow']), float(data['Ore_Pulp_Flow']),
+               float(data['Ore_Pulp_pH']), float(data['Ore_Pulp_Density']), float(data['Iron_Concentrate']),
+               float(raw), float(bias), float(final)))
     conn.commit()
     conn.close()
 
-def get_logs():
-    """Geçmiş tahminleri getirir."""
-    conn = sqlite3.connect('monitoring.db')
-    df = pd.read_sql("SELECT * FROM predictions", conn)
-    conn.close()
-    return df
 
-
-# Uygulama başlarken veritabanını hazırla
 init_db()
 
-
-# --- MODEL YÜKLEME ---
-@st.cache_resource
-def load_model():
-    model_path = 'models/final_xgboost_model.pkl'
-    if not os.path.exists(model_path):
-        model_path = '../models/final_xgboost_model.pkl'
-    try:
-        return joblib.load(model_path)
-    except:
-        return None
-
-
-model = load_model()
-
-# --- BAŞLIK ---
+# --- ARAYÜZ ---
 st.title("⛏️ Maden Flotasyon Tesisi - AI Sistemi")
 
-# --- SEKME YAPISI (Prediction vs Monitoring) ---
-tab1, tab2 = st.tabs(["🔍 Tahmin Ekranı", "📊 Monitoring (İzleme)"])
+tab1, tab2 = st.tabs(["🔍 Tahmin", "📊 Monitoring"])
 
 with tab1:
-    # --- YAN MENÜ (INPUTS) ---
-    st.sidebar.header("⚙️ Sensör Değerleri")
+    st.sidebar.header("⚙️ Sensörler")
 
+    iron_feed = st.sidebar.slider('Demir Besleme', 40.0, 65.0, 55.0)
+    silica_feed = st.sidebar.slider('Silika Besleme', 5.0, 35.0, 15.0)
+    starch_flow = st.sidebar.slider('Nişasta Akışı', 0.0, 6000.0, 3000.0)
+    amina_flow = st.sidebar.slider('Amina Akışı', 200.0, 600.0, 450.0)
+    ore_pulp_flow = st.sidebar.slider('Cevher Pülp Akışı', 350.0, 450.0, 400.0)
+    ore_pulp_ph = st.sidebar.slider('Cevher Pülp pH', 8.5, 11.0, 9.8)
+    ore_pulp_density = st.sidebar.slider('Cevher Pülp Yoğunluğu', 1.5, 1.9, 1.7)
+    st.sidebar.markdown("**🔥 Kritik Sensör**")
+    iron_conc = st.sidebar.slider('Demir Konsantresi', 40.0, 70.0, 65.0)
 
-    def user_input_features():
-        Iron_Feed = st.sidebar.slider('Demir Besleme', 40.0, 65.0, 55.0)
-        Silica_Feed = st.sidebar.slider('Silika Besleme', 5.0, 35.0, 15.0)
-        Starch_Flow = st.sidebar.slider('Nişasta Akışı', 0.0, 6000.0, 3000.0)
-        Amina_Flow = st.sidebar.slider('Amina Akışı', 200.0, 600.0, 450.0)
-        Ore_Pulp_Flow = st.sidebar.slider('Cevher Pülp Akışı', 350.0, 450.0, 400.0)
-        Ore_Pulp_pH = st.sidebar.slider('Cevher Pülp pH', 8.5, 11.0, 9.8)
-        Ore_Pulp_Density = st.sidebar.slider('Cevher Pülp Yoğunluğu', 1.5, 1.9, 1.7)
-        st.sidebar.markdown("**🔥 Kritik Sensör**")
-        Iron_Concentrate = st.sidebar.slider('Demir Konsantresi', 40.0, 70.0, 65.0)
+    input_data = {
+        'Iron_Feed': iron_feed, 'Silica_Feed': silica_feed,
+        'Starch_Flow': starch_flow, 'Amina_Flow': amina_flow,
+        'Ore_Pulp_Flow': ore_pulp_flow, 'Ore_Pulp_pH': ore_pulp_ph,
+        'Ore_Pulp_Density': ore_pulp_density, 'Iron_Concentrate': iron_conc
+    }
 
-        return {
-            'Iron_Feed': Iron_Feed, 'Silica_Feed': Silica_Feed,
-            'Starch_Flow': Starch_Flow, 'Amina_Flow': Amina_Flow,
-            'Ore_Pulp_Flow': Ore_Pulp_Flow, 'Ore_Pulp_pH': Ore_Pulp_pH,
-            'Ore_Pulp_Density': Ore_Pulp_Density, 'Iron_Concentrate': Iron_Concentrate
-        }
-
-
-    input_data = user_input_features()
-
-    # --- LAB KALİBRASYONU ---
+    # Lab Entegrasyonu
     st.sidebar.markdown("---")
     st.sidebar.header("🧪 Lab Kalibrasyonu")
     use_lab = st.sidebar.checkbox("Lab Verisiyle Düzelt")
@@ -143,33 +110,20 @@ with tab1:
         bias = last_lab - last_model
         st.sidebar.info(f"Bias: {bias:+.2f}")
 
-    st.sidebar.caption("Hazırlayan: Sedat Akdağ (Maden Yüksek Mühendisi)")
+    st.sidebar.caption("Sedat Akdağ - Maden Yüksek Mühendisi")
 
-    # --- TAHMİN BUTONU ---
-    if st.button('🔍 Kaliteyi Tahmin Et ve Kaydet'):
-        if model:
-            # Veriyi hazırla
-            expected_cols = model.get_booster().feature_names
-            input_df = pd.DataFrame(columns=expected_cols)
-            input_df.loc[0] = 0
-            for key, val in input_data.items():
-                for col in expected_cols:
-                    if key in col: input_df.at[0, col] = val
+    if st.button('🔍 Tahmin Et'):
+        if service:
+            raw_pred = service.predict(input_data)
+            final_pred = raw_pred + bias
 
-            # Tahmin
-            raw_prediction = model.predict(input_df)[0]
-            final_prediction = raw_prediction + bias
+            log_prediction(input_data, raw_pred, bias, final_pred)
+            st.toast("Kayıt Başarılı!", icon="💾")
 
-            # --- LOGLAMA İŞLEMİ ---
-            log_prediction(input_data, raw_prediction, bias, final_prediction)
-            st.toast("Veri başarıyla loglandı!", icon="💾")  # Kullanıcıya bildirim
-
-            # Görselleştirme
             col1, col2 = st.columns(2)
             with col1:
-                st.subheader("Tahmini Silika")
                 fig = go.Figure(go.Indicator(
-                    mode="gauge+number+delta", value=final_prediction,
+                    mode="gauge+number+delta", value=final_pred,
                     title={'text': "% Silica"},
                     delta={'reference': 2.5, 'increasing': {'color': "red"}, 'decreasing': {'color': "green"}},
                     gauge={'axis': {'range': [0, 6]}, 'bar': {'color': "darkblue"},
@@ -177,53 +131,27 @@ with tab1:
                                      {'range': [2.0, 3.5], 'color': "yellow"},
                                      {'range': [3.5, 6.0], 'color': "red"}]}))
                 st.plotly_chart(fig)
-
             with col2:
-                st.subheader("Durum Analizi")
-                if final_prediction < 2.0:
-                    st.success("✅ MÜKEMMEL KALİTE")
-                elif final_prediction < 3.5:
-                    st.warning("⚠️ ORTA KALİTE")
+                if final_pred < 2.0:
+                    st.success("✅ MÜKEMMEL")
+                elif final_pred < 3.5:
+                    st.warning("⚠️ ORTA")
                 else:
-                    st.error("❌ KÖTÜ KALİTE")
-                st.write(f"**Ham Tahmin:** %{raw_prediction:.2f}")
-                if use_lab: st.write(f"**Lab Düzeltmesi:** {bias:+.2f}")
+                    st.error("❌ KÖTÜ")
+                st.write(f"**Model:** %{raw_pred:.2f}")
+                if use_lab: st.write(f"**Bias:** {bias:+.2f}")
 
 with tab2:
-    st.header("📊 Gerçek Zamanlı İzleme Paneli (Monitoring)")
-    st.markdown("Modelin canlı ortamdaki performans geçmişi ve tahmin dağılımları.")
-
-    # Logları Çek
-    df_logs = get_logs()
-
-    if not df_logs.empty:
-        # Tabloyu Göster
-        st.dataframe(df_logs.sort_values('timestamp', ascending=False).head(10), use_container_width=True)
-
-        # Grafik 1: Zaman İçindeki Tahminler
-        st.subheader("📈 Tahmin Trendi (Zaman Serisi)")
-        fig_trend = px.line(df_logs, x='timestamp', y='final_result', markers=True,
-                            title="Tahmini Silika Oranı Değişimi")
-        fig_trend.add_hline(y=2.5, line_dash="dash", line_color="green", annotation_text="Hedef Kalite")
-        st.plotly_chart(fig_trend, use_container_width=True)
-
-        # Grafik 2: Dağılım
-        col_mon1, col_mon2 = st.columns(2)
-        with col_mon1:
-            st.subheader("Demir Konsantresi vs Silika")
-            fig_scatter = px.scatter(df_logs, x='iron_concentrate', y='final_result', color='final_result',
-                                     color_continuous_scale='RdYlGn_r', title="Kritik Sensör İlişkisi")
-            st.plotly_chart(fig_scatter)
-
-        with col_mon2:
-            st.subheader("İstatistikler")
-            st.metric("Toplam Tahmin Sayısı", len(df_logs))
-            st.metric("Ortalama Silika", f"%{df_logs['final_result'].mean():.2f}")
-            st.metric("En Kötü Tahmin", f"%{df_logs['final_result'].max():.2f}")
-
-        # İndirme Butonu
-        csv = df_logs.to_csv(index=False).encode('utf-8')
-        st.download_button("Logları İndir (CSV)", csv, "monitoring_logs.csv", "text/csv")
-
-    else:
-        st.info("Henüz kayıtlı bir tahmin yok. 'Tahmin Ekranı'na gidip butona basın.")
+    st.header("📊 İzleme Paneli")
+    conn = sqlite3.connect(config.DB_PATH)
+    try:
+        df_logs = pd.read_sql("SELECT * FROM predictions", conn)
+        if not df_logs.empty:
+            st.dataframe(df_logs.sort_values('timestamp', ascending=False).head(5), use_container_width=True)
+            fig = px.line(df_logs, x='timestamp', y='final_result', title="Kalite Trendi")
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("Veri yok.")
+    except:
+        st.info("Veritabanı henüz oluşmadı.")
+    conn.close()
